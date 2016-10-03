@@ -1,31 +1,60 @@
+"""
+Copyright (c) 2016 by MTech of Univ. of Michigan, Ann Arbor.
+All rights reserved. Not to be used for commercial purposes.
+
+This file provides a simple implementation of linear, lasso, and ridge regression methods.
+The methods are applied to a polynomial curve fitting problem of a 1D dataset.
+This file illustrates the use of the function *scipy.optimize.minimize*.
+
+Author: Daning Huang
+Date: 10/02/2016
+"""
+
 import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
 def normalize(v):
+    """Scale the input vector, so that most of the elements are in [-1, 1]."""
     avr = np.mean(v)
     std = np.std(v)
     return (v-avr)/std, avr, std
 
 def recover(w, avr, std):
+    """Map the vector back to the original range."""
     return w*std+avr
 
 def polynomialResidue(c, x, y):
+    """
+    Compute the residue of the regression function,
+    given the polynomial coefficients c, input x, and output y.
+    """
+    # By default, the elements of input vector to *poly1d* start from the highest order.
+    # Yet, in current regression problem, the vector is defined in a reversed way.
     pol = np.poly1d(c[::-1])
     res = pol(x)-y
     return res.dot(res)
 
 def polynomialJacobian(c, x, y):
+    """
+    Compute the jacobian of the residue,
+    given the polynomial coefficients c, input x, and output y.
+    """
     pol = np.poly1d(c[::-1])
     dif = 2.0*(pol(x)-y)
     der = np.zeros_like(c)
     xp  = np.ones_like(x)
     for i in range(len(c)):
+        # Here x^i is computed from x^(i-1) to improve computational efficiency.
         der[i] = dif.dot(xp)
         xp = xp*x
     return der
 
 def regs(odrs, cons=()):
+    """
+    Solve regression problems using a series of polynomials of different orders *odrs*.
+    The parameter *cons* specifies the constraints, leading to different types of regression.
+    """
     s = []
     f = plt.figure()
     for idx in range(len(odrs)):
@@ -53,14 +82,8 @@ if __name__ == "__main__":
     x, xavr, xstd = normalize(x0)
     y, yavr, ystd = normalize(y0)
 
-    f = plt.figure()
-    plt.plot(x0, y0, 'bo', fillstyle='none')
-    plt.grid()
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.show()
-
-    # Define the objective function
+    # Define the objective function and its jacobian, so that
+    # the data set is inherent in the functions.
     residue  = lambda c: polynomialResidue(c, x, y)
     jacobian = lambda c: polynomialJacobian(c, x, y)
 
